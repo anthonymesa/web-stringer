@@ -6,9 +6,9 @@ import timestamp from "time-stamp";
 export const peer = new Peer(null, {
     config: {
         iceServers: [{
-            urls: 'stun:freeturn.net:5349',
+            urls: 'stun:freeturn.net:3478',
         }, {
-            urls: 'turns:freeturn.tel:4349',
+	    urls: 'turn:freeturn.net:3478',
             username: 'free',
             credential: 'free',
         }],
