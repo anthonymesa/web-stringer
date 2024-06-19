@@ -2,6 +2,7 @@
   "name": "web-stringer",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@mantine/core": "^7.10.2",
     "@mantine/hooks": "^7.10.2",
