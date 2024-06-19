@@ -11,7 +11,7 @@ import {
     Text,
     TextInput,
 } from "@mantine/core";
-import { peer, useAppStore } from "./Store";
+import { useAppStore } from "./Store";
 import QRCode from "react-qr-code";
 
 const theme = createTheme({});
@@ -79,10 +79,24 @@ function CardHeader() {
 }
 
 function SenderCard() {
-    const connection = useAppStore((store) => store.connection);
+    const senderState = useAppStore((store) => store.senderState);
     const openConnection = useAppStore((store) => store.openConnection);
     const setReceiverId = useAppStore((store) => store.setReceiverId);
     const receiverId = useAppStore((store) => store.receiverId);
+
+    const buttonText = () => {
+	    switch(senderState) {
+	case "disconnected": 
+		    return "connect";
+	case "waiting":
+		    return "connecting...";
+	    case "connected":
+		    return "connected";
+	    }}
+
+	const buttonDisabled = () => {
+	return receiverId === "" || ["waiting", "connected"].includes(senderState)
+	}
 
     return (
         <>
@@ -92,14 +106,13 @@ function SenderCard() {
                 onChange={(e) => setReceiverId(e.currentTarget.value)}
             />
             <Space h="md" />
-            {!connection && (
+            
                 <Button
-                    disabled={receiverId === ""}
+                    disabled={buttonDisabled()}
                     onClick={openConnection}
                 >
-                    Connect
+	    {buttonText()}
                 </Button>
-            )}
         </>
     );
 }
@@ -107,16 +120,30 @@ function SenderCard() {
 function ReceiverCard() {
     const beginReceiving = useAppStore((store) => store.beginReceiving);
     const dataLog = useAppStore((store) => store.dataLog);
-    const receiving = useAppStore((store) => store.receiving);
+    const receiverState= useAppStore((store) => store.receiverState);
+    const clientId = useAppStore((store) => store.clientId);	
+    const stopReceiving = useAppStore((store) => store.stopReceiving);
+
+    const buttonDisabled = () => {
+	return ["waiting", "connected"].includes(receiverState)	
+    }
+
+    const buttonText = () => {
+	    const text = {
+	"disconnected": "Start Receiving",
+	"waiting": "Initializing...",
+	"connected": "Ready"
+    }
+	    return text[receiverState]
+    }
 
     return (
         <>
-            <Text>ID: {peer.id}</Text>
-            <QRCode value={peer.id ?? "default-id"} />
+	    {clientId && <Stack><Text>ID: {clientId}</Text>
+            <QRCode value={clientId ?? "default-id"} /></Stack>}
             <Space h="md" />
-            {!receiving && (
-                <Button onClick={beginReceiving}>Start Receiving...</Button>
-            )}
+            <Button disabled={buttonDisabled()} onClick={beginReceiving}>{buttonText()}</Button>
+	    <Button disabled={receiverState === "disconnected"} onClick={stopReceiving}>X</Button>
             <Stack>
                 {dataLog.map((each) => (
                     <Text key={each}>{each}</Text>

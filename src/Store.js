@@ -3,7 +3,7 @@ import assert from "assert";
 import Peer from "peerjs";
 import timestamp from "time-stamp";
 
-export const peer = new Peer(null, {
+const peerConfig = {
     config: {
         iceServers: [{
             urls: 'stun:freeturn.net:3478',
@@ -15,15 +15,33 @@ export const peer = new Peer(null, {
         sdpSemantics: 'unified-plan',
         debug: 3,
     }
-});
+};
 
-export const useAppStore = create((set) => ({
+export const useAppStore = create((set, get) => ({
     role: "",
+    clientId: "",
     receiverId: "",
-    senderId: "",
-    receiving: false,
-    connection: null,
+    senderState: "disconnected",
+    receiverState: "disconnected",
+    closeSenderConnection: () => {},
+    stopReceiving: () => {},
     dataLog: [],
+    setSenderState: (value) => {
+	assert(
+	    ["disconnected", "waiting", "connected"].includes(value), 
+	    "Store.setSenderState.setSenderState(value): Unexpected value."
+	);
+
+    	set({ senderState: value});
+    },
+    setReceiverState: (value) => {
+	assert(
+	    ["disconnected", "waiting", "connected"].includes(value), 
+	    "Store.setReceiverState.setReceiverState(value): Unexpected value."
+	);
+
+    	set({ receiverState: value})
+    },
     setRole: (value) => {
         assert(
             ["sender", "receiver", ""].includes(value),
@@ -32,26 +50,36 @@ export const useAppStore = create((set) => ({
         set({ role: value });
     },
     openConnection: () => {
-        set((state) => {
-            assert(
-                !state.connection,
-                "Store.openConnection: Connection exists."
-            );
+	const peer = new Peer(null, peerConfig);
+        get().setSenderState("waiting");
+	
+	peer.on("open", () => {
+		const conn = peer.connect(get().receiverId);
+		
+		conn.on("open", () => {
+		    set({closeSenderConnection: () => conn.close()});
+		    get().setSenderState("connected");
+		});
 
-            const conn = peer.connect(state.receiverId);
+		conn.on("data", (data) => {
+		    console.log(data);
+		});
 
-            conn.on("open", () => {
-                conn.send("Hello!");
-            });
-            conn.on("data", (data) => {
-                console.log(data);
-            });
-
-            return { connection: conn };
+		conn.on("close", () => {
+		    get().setSenderState("disconnected");
+		});
+		    
+		conn.on("error", (e) => {
+			console.error(e)
+			get().setSenderState("disconnected");
+		})
         });
     },
     closeConnection: () => {
-        set({ connection: null });
+        get().closeSenderConnection();
+	get().stopReceiving();
+	get().setSenderState("disconnected");
+	get().setReceiverState("disconnected");
     },
     setReceiverId: (value) => {
         assert(
@@ -61,22 +89,46 @@ export const useAppStore = create((set) => ({
         set({ receiverId: value });
     },
     beginReceiving: () => {
+        set({ receiving: true, receiverState: "waiting" });
+       
+	const peer = new Peer(null, peerConfig);
+	
+	peer.on("open", () => {
+		set({clientId: peer.id, receiverState: "connected"});
+	})
+
         peer.on("connection", (conn) => {
-            conn.on("data", (data) => {
-                set((state) => ({
-                    dataLog: [
-                        ...state.dataLog,
-                        `${timestamp("YYYY/MM/DD HH:mm:ss")} - ${
-                            conn.peer
-                        } - ${data}`,
-                    ],
-                }));
-            });
+		
             conn.on("open", () => {
-                console.log("Connected successfully");
+		    get().appendDataLog(conn.peer, 'connected');
+	    });
+
+            conn.on("data", (data) => {
+		get().appendDataLog(conn.peer, data)
             });
+
+	    conn.on("close", (id) => {
+		get().appendDataLog(conn.peer, 'disconnected');		
+	    });
+
+	    conn.on("error", (e) => {
+		set({ receiverState: "disconnected" });
+	    });
         });
-        set({ receiving: true });
+	set({ stopReceiving: () => {
+			peer.destroy()
+			set({receiverState: "disconnected"});
+			get().clearDataLog();
+		}
+	});
+    },
+    appendDataLog: (id, text) => {
+	set((state) => ({
+		dataLog: [
+			...state.dataLog,
+                        `${timestamp("YYYY/MM/DD HH:mm:ss")} - ${id} - ${text}`,
+		],
+	}));
     },
     clearDataLog: () => {
         set({ dataLog: [] });
