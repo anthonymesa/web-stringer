@@ -85,18 +85,17 @@ function SenderCard() {
     const receiverId = useAppStore((store) => store.receiverId);
 
     const buttonText = () => {
-	    switch(senderState) {
-	case "disconnected": 
-		    return "connect";
-	case "waiting":
-		    return "connecting...";
-	    case "connected":
-		    return "connected";
-	    }}
-
-	const buttonDisabled = () => {
-	return receiverId === "" || ["waiting", "connected"].includes(senderState)
+	const text = {
+	    "disconnected": "connect",
+	    "waiting": "connecting...",
+	    "connected": "connected",
 	}
+	return text[senderState];
+    }
+
+    const buttonDisabled = () => {
+	return receiverId === "" || ["waiting", "connected"].includes(senderState)
+    }
 
     return (
         <>
