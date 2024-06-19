@@ -13,6 +13,7 @@
     "peerjs": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-icons": "^5.2.1",
     "react-qr-code": "^2.0.14",
     "react-scripts": "5.0.1",
     "time-stamp": "^2.2.0",

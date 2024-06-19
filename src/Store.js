@@ -18,13 +18,15 @@ const peerConfig = {
 };
 
 export const useAppStore = create((set, get) => ({
-    role: "",
+    role: "about",
     clientId: "",
     receiverId: "",
     senderState: "disconnected",
     receiverState: "disconnected",
     closeSenderConnection: () => {},
     stopReceiving: () => {},
+    sendToReceiver: () => {},
+	content: "",
     dataLog: [],
     setSenderState: (value) => {
 	assert(
@@ -44,21 +46,30 @@ export const useAppStore = create((set, get) => ({
     },
     setRole: (value) => {
         assert(
-            ["sender", "receiver", ""].includes(value),
+            ["sender", "receiver", "about"].includes(value),
             "Store.useAppStore.setRole(value): Unexpected value."
         );
         set({ role: value });
     },
+    setContent: (value) => {
+	    set({content: value});
+    },
     openConnection: () => {
 	const peer = new Peer(null, peerConfig);
+	    
         get().setSenderState("waiting");
 	
+	set({closeSenderConnection: () => {
+		get().setSenderState("disconnected");
+		peer.destroy();
+	}});
+
 	peer.on("open", () => {
 		const conn = peer.connect(get().receiverId);
-		
+	
 		conn.on("open", () => {
-		    set({closeSenderConnection: () => conn.close()});
 		    get().setSenderState("connected");
+			set({sendToReceiver: (value) => conn.send(value)});
 		});
 
 		conn.on("data", (data) => {
@@ -67,11 +78,13 @@ export const useAppStore = create((set, get) => ({
 
 		conn.on("close", () => {
 		    get().setSenderState("disconnected");
+			set({sendToReceiver: () => {}});
 		});
 		    
 		conn.on("error", (e) => {
 			console.error(e)
 			get().setSenderState("disconnected");
+			set({sendToReceiver: () => {}});
 		})
         });
     },
@@ -89,18 +102,20 @@ export const useAppStore = create((set, get) => ({
         set({ receiverId: value });
     },
     beginReceiving: () => {
-        set({ receiving: true, receiverState: "waiting" });
+	get().setReceiverState("waiting");
+        set({ receiving: true });
        
 	const peer = new Peer(null, peerConfig);
 	
 	peer.on("open", () => {
-		set({clientId: peer.id, receiverState: "connected"});
+		get().setReceiverState("connected");
+		set({clientId: peer.id});
 	})
 
         peer.on("connection", (conn) => {
 		
             conn.on("open", () => {
-		    get().appendDataLog(conn.peer, 'connected');
+		get().appendDataLog(conn.peer, 'connected');
 	    });
 
             conn.on("data", (data) => {
@@ -112,12 +127,14 @@ export const useAppStore = create((set, get) => ({
 	    });
 
 	    conn.on("error", (e) => {
-		set({ receiverState: "disconnected" });
+		get().setReceiverState("disconnected");
 	    });
         });
+
 	set({ stopReceiving: () => {
 			peer.destroy()
-			set({receiverState: "disconnected"});
+			get().setReceiverState("disconnected");
+			set({clientId: ""});
 			get().clearDataLog();
 		}
 	});
