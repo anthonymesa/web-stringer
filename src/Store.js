@@ -3,7 +3,19 @@ import assert from "assert";
 import Peer from "peerjs";
 import timestamp from "time-stamp";
 
-export const peer = new Peer();
+export const peer = new Peer(null, {
+    config: {
+        iceServers: [{
+            urls: 'stun:freeturn.net:5349',
+        }, {
+            urls: 'turns:freeturn.tel:4349',
+            username: 'free',
+            credential: 'free',
+        }],
+        sdpSemantics: 'unified-plan',
+        debug: 3,
+    }
+});
 
 export const useAppStore = create((set) => ({
     role: "",

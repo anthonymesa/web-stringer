@@ -112,7 +112,7 @@ function ReceiverCard() {
     return (
         <>
             <Text>ID: {peer.id}</Text>
-            <QRCode value={peer.id} />
+            <QRCode value={peer.id ?? "default-id"} />
             <Space h="md" />
             {!receiving && (
                 <Button onClick={beginReceiving}>Start Receiving...</Button>
