@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import "./App.css";
 import {
     Button,
@@ -95,7 +94,7 @@ function SenderCard() {
             <Space h="md" />
             {!connection && (
                 <Button
-                    disabled={receiverId == ""}
+                    disabled={receiverId === ""}
                     onClick={openConnection}
                 >
                     Connect
@@ -131,12 +130,12 @@ function App() {
     const role = useAppStore((store) => store.role);
 
     const RoleInterface = () =>
-        role == "sender" ? <SenderCard /> : <ReceiverCard />;
+        role === "sender" ? <SenderCard /> : <ReceiverCard />;
 
     return (
         <MantineProvider theme={theme}>
             <div className="App">
-                {role == "" ? (
+                {role === "" ? (
                     <Stack
                         h={"100%"}
                         justify="center"
