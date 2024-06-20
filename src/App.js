@@ -176,7 +176,7 @@ function ReceiverCard() {
 
 				</Group>
 				<Paper withBorder shadow="0" style={{flex: 1}} ref={paperRef}>
-					<ScrollArea h={scrollHeight} type="auto" styles={{root: {overflow: 'auto', maxWidth: '100%'}}}>
+					<ScrollArea h={scrollHeight} type="auto" styles={{root: {overflow: 'auto', maxWidth: '100%'}}} scrollbarSize={3}>
 						<Stack 
 							gap="xs"
 							styles={{root: {paddingLeft: '1rem', paddingRight: '1rem', minWidth: '400px'}}}
@@ -238,9 +238,13 @@ function App() {
 									<Space h="md" />
 									<Title order={2}>Web-Stringer</Title>	
 											<Divider my="xs" />
-											<Text size="xs">This application uses PeerJS and WebRTC technology to provide an easy way of sending data across clients without a backend (essentially). This application is hosted on github, and uses a freely available PeerJS and TURN server, allowing this application to provide remote connection without requiring beckend development from the developer.</Text>
-			<Space h="md"/>
+									<ScrollArea h={"calc(100% - 6rem)"} type="auto" scrollbarSize={3}>
+											<Text size="xs">This uses PeerJS and WebRTC technology to provide an easy way of sending data across clients without a backend (essentially). This application is hosted on github, and uses a freely available PeerJS and TURN server, providng remote connection without requiring beckend development.</Text> <Space h="md"/>
+<Text size="xs">Users can choose to be either sender or receiver. A receiver will be given a random id that can then be used by senders to connect to the receiver. Once a sender is connected to the receiver, they can send data to the receiver. This isn't intended to be a two way connection, so the receiver can not respond to the sender.</Text>
+	<Space h="md"/>	
+	<Text size="xs">This tool was mainly created to provide a simple an easy way to copy and paste across electronic devices. Click on the text received to copy it to your clipboard.</Text>		<Space h="md"/>
 						<Text size="xs">Developed by <a href="https://www.github.com/anthonymesa">Anthony Mesa</a></Text>
+						</ScrollArea>
 								</Tabs.Panel>
 								
 								<Tabs.Panel value="receiver">
