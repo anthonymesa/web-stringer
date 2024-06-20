@@ -1,158 +1,203 @@
 import "./App.css";
 import {
-	FiCopy
+	useState,
+	useRef,
+	useEffect,
+} from 'react'
+import {
+	FiUploadCloud,
+	FiPlayCircle,
+	FiStopCircle,
 } from "react-icons/fi";
 import {
-    Button,
-    Textarea,
+	Button,
+	Textarea,
 	CopyButton,
-    Paper,
-    Tabs,
-    ScrollArea,
-    Card,
-    Divider,
-    Title,
-    Container,
-    Center,
-    createTheme,
-    Group,
-    MantineProvider,
-    Space,
-    Stack,
-    Text,
-    TextInput,
+	Paper,
+	Tabs,
+	ScrollArea,
+	Card,
+	Divider,
+	Title,
+	Center,
+	createTheme,
+	Group,
+	MantineProvider,
+	Space,
+	Stack,
+	Text,
+	TextInput,
 } from "@mantine/core";
 import { useAppStore } from "./Store";
-import QRCode from "react-qr-code";
 
 const theme = createTheme({});
 
 function SenderCard() {
-    const senderState = useAppStore((store) => store.senderState);
+	const senderState = useAppStore((store) => store.senderState);
 	const sendToReceiver = useAppStore((store) => store.sendToReceiver);
-    const openConnection = useAppStore((store) => store.openConnection);
-    const setReceiverId = useAppStore((store) => store.setReceiverId);
+	const openConnection = useAppStore((store) => store.openConnection);
+	const setReceiverId = useAppStore((store) => store.setReceiverId);
 	const content = useAppStore((store) => store.content);
 	const setContent = useAppStore((store) => store.setContent);
-    const receiverId = useAppStore((store) => store.receiverId);
-    const closeSenderConnection = useAppStore((store) => store.closeSenderConnection);
-    const buttonText = () => {
-	const text = {
-	    "disconnected": "connect",
-	    "waiting": "connecting...",
-	    "connected": "connected",
-	}
-	return text[senderState];
-    }
+	const receiverId = useAppStore((store) => store.receiverId);
+	const closeSenderConnection = useAppStore((store) => 
+		store.closeSenderConnection
+	);
 
-    const buttonDisabled = () => {
-	return receiverId === "" || ["waiting", "connected"].includes(senderState)
-    }
+	const statusText = () => {
+		const text = {
+				"disconnected": <span style={{color: 'red'}}>Disconnected</span>,
+				"waiting": <span style={{color: 'blue'}}>Trying to connect...</span>,
+				"connected": <span style={{color: 'green'}}>Connected</span>,
+		}
+
+		return text[senderState];
+	}
+
+	const buttonDisabled = () => {
+		return receiverId === "" || ["waiting", "connected"].includes(senderState)
+	}
+
 	const handleOnSubmit = () => {
 		sendToReceiver(content);
 	}
 
-    return (
-        <Stack styles={{root: {height: "100%", paddingTop: '1rem'}}}>
-	    <Group justify="space-between">
-		   <Group> 
-			<Button disabled={buttonDisabled()} onClick={openConnection}>
-				{buttonText()}
-			</Button>
+	return (
+		<Stack justify="flex-start" gap="xs" styles={{root: {height: "100%", paddingTop: '1rem'}}}>
+			<Center>
+				<Text size="xs">
+					Status: {statusText()}
+				</Text>
+			</Center>
+		<TextInput
+				placeholder="Receiver ID..."
+				value={receiverId}
+				onChange={(e) => setReceiverId(e.currentTarget.value)}
+			/>
+			<Group justify="space-between">
+				<Group> 
+										{senderState !== "disconnected" 
+						? <Button variant="light" color="red" onClick={() => closeSenderConnection()}><FiStopCircle /></Button> 
+						: <Button variant="light" color="green" disabled={buttonDisabled()} onClick={openConnection}>
+					  <FiPlayCircle />
+					</Button>
+					}
+				</Group>
+				<Button 
+					color="blue"
+					variant="light"
+					disabled={["disconnected", "waiting"].includes(senderState)} 
+					onClick={handleOnSubmit}
+				>
+					<FiUploadCloud />
+				</Button>
 
-			{senderState !== "disconnected" 
-				&& <Button onClick={() => closeSenderConnection()}>Stop</Button>
-			}
-		   </Group>
-		    <TextInput
-			placeholder="Receiver ID..."
-			value={receiverId}
-			onChange={(e) => setReceiverId(e.currentTarget.value)}
-			style={{flex: 1}}
-		    />
-	   </Group>
-	   <Textarea value={content} onChange={(e) => setContent(e.currentTarget.value)} h={"18rem"} styles={{wrapper: {height: '100%'}, input: {height: '100%'}}}/>
-	    <Center>
-	    <Button w={"6rem"} disabled={["disconnected", "waiting"].includes(senderState)} onClick={handleOnSubmit}>Send</Button>
-	    </Center>
-        </Stack>
-    );
+		  </Group>
+			
+			<Textarea 
+				value={content}
+				style={{flex: 1}}
+				placeholder={'Data to send...'}
+				onChange={(e) => setContent(e.currentTarget.value)} 
+				styles={{wrapper: {height: '100%'}, input: {whiteSpace: 'pre-wrap', height: '100%'}}}
+			/>
+		</Stack>
+	);
 }
 
 function ReceiverCard() {
     const beginReceiving = useAppStore((store) => store.beginReceiving);
     const dataLog = useAppStore((store) => store.dataLog);
     const receiverState= useAppStore((store) => store.receiverState);
-    const clientId = useAppStore((store) => store.clientId);	
+    const getRawClientId = useAppStore((store) => store.getRawClientId);	
     const stopReceiving = useAppStore((store) => store.stopReceiving);
 
-    const buttonDisabled = () => {
-	return ["waiting", "connected"].includes(receiverState)	
-    }
+		const paperRef = useRef(null);
+		const [scrollHeight, setScrollHeight] = useState(0);
 
-    const buttonText = () => {
-	    const text = {
-	"disconnected": "Start Receiving",
-	"waiting": "Initializing...",
-	"connected": "Ready"
-    }
+		useEffect(() => {
+			const reference = paperRef.current;
+
+			const updateHeight = () => {
+				if (reference) {
+					setScrollHeight(reference.clientHeight);
+				}
+			}
+
+			const observer = new ResizeObserver((entries) => {
+				for(let entry of entries) {
+					setScrollHeight(entry.contentRect.height);
+				}
+			});
+			
+			if (reference) {
+				observer.observe(reference);
+			}
+
+			window.addEventListener('resize', updateHeight);
+
+			return () => {
+				if (reference) {
+					observer.unobserve(reference);
+				}
+				window.removeEventListener('resize', updateHeight);
+			}
+		}, []);
+
+    const statusText = () => {
+			const text = {
+				"disconnected": (<span style={{color: "red"}}>Offline</span>),
+				"waiting": <span style={{color: "blue"}}>Initializing...</span>,
+				"connected": <span style={{color: "green"}}>Ready</span>
+			}
+
 	    return text[receiverState]
     }
-	
-    const ClientInfo = () => (
-	<Group>
-	    	<QRCode size={'4rem'} value={clientId} />
-		<Title order={2}>ID:</Title>
-	    	<Text>{clientId}</Text>
-	</Group>
-    );
-
-    const InfoPlaceholder = () => (
-	<Group>
-	    	<Container h={'4rem'} w={'4rem'} bg={'#DDDDDD'} />
-		<Title order={2}>ID:</Title>
-	    	<Text>{clientId}</Text>
-	</Group>
-    )
 
     return (
-        <>
-	    <Space h="md" />
-	    <Group justify="space-between">
-	    	{receiverState === 'connected' 
-		    ? <ClientInfo /> 
-		    : <InfoPlaceholder />
-	    	}
-	    	
-	    	<Group>            
-	    		<Button 
-	    	    		disabled={buttonDisabled()} 
-	       	    		onClick={beginReceiving}>{buttonText()}</Button>
-	    
-	    		{receiverState !== "disconnected" 
-		    		&& <Button onClick={stopReceiving}>Stop</Button>
-			}
-	    	</Group>
-	    </Group>
-	    <Space h="md"/>
-	    <Paper withBorder shadow="0">
-	    <ScrollArea h={'19rem'} type="always">
-	    <Space h="md"/>
-	    <Stack styles={{root: {paddingLeft: '1rem', paddingRight: '1rem'}}}>
-                {dataLog.map((each) => (
-			<Group>
-                    <Text style={{flex: 1}} key={each}>{each}</Text>
-			<CopyButton value={each.split('-').pop()}>
-				{({copied, copy}) => ( 
-					<Button onClick={copy} size={"xs"} variant="light"><FiCopy /></Button>
-				)}	
-			</CopyButton>
-			</Group>
-                ))}
-            </Stack>
-	    </ScrollArea>
-	    </Paper>
-        </>
+			<Stack gap="xs" justify="flex-start" styles={{root: {height: "100%", paddingTop: '1rem'}}}>
+				<Center>
+					<Text size="xs">Status: {statusText()}</Text>
+				</Center>
+				<Group gap="xs">
+				  {receiverState !== "disconnected" 
+						? <Button size="xs" variant="light" color="red" onClick={stopReceiving}><FiStopCircle /></Button>
+						: <Button
+								variant="light"
+								color="green"
+								size="xs"
+								onClick={beginReceiving}
+							>
+								<FiPlayCircle/>
+							</Button>
+					}
+					<Title order={4}>ID:</Title>
+					<Text size="xs">{getRawClientId()}</Text>
+
+				</Group>
+				<Paper withBorder shadow="0" style={{flex: 1}} ref={paperRef}>
+					<ScrollArea h={scrollHeight} type="auto" styles={{root: {overflow: 'auto', maxWidth: '100%'}}}>
+						<Stack 
+							gap="xs"
+							styles={{root: {paddingLeft: '1rem', paddingRight: '1rem', minWidth: '400px'}}}
+						>
+							<Space h="xs" />
+							{dataLog.map((each) => (
+							<>
+									<Divider labelPosition="left" label={each.meta} size="xs" /> 
+									<CopyButton value={each.value}>
+										{({copied, copy}) => ( 
+												<Text style={{whiteSpace: 'pre-wrap', cursor: 'pointer'}} onClick={copy} size="xs">
+													{each.value}
+												</Text> 
+										)}	
+									</CopyButton>
+									</>
+							))}
+						</Stack>
+					</ScrollArea>
+				</Paper>
+			</Stack>
     );
 }
 
@@ -172,38 +217,44 @@ function App() {
     };
 
     return (
-        <MantineProvider theme={theme}>
-            <div className="App">
-		    <Center h="100%">
-			    <Card w="80%" h="30rem" shadow="sm" padding="lg" radius="md">
-				    <Tabs styles={{root: {flex: 1}}} value={role} onChange={handleOnChange}>
-					<Tabs.List>
-						<Tabs.Tab value="about">About</Tabs.Tab>
-						<Tabs.Tab value="receiver">Receiver</Tabs.Tab>
-						<Tabs.Tab value="sender">Sender</Tabs.Tab>
-					</Tabs.List>
-					
-					<Tabs.Panel value="about">
-						<Space h="md" />
-						<Title>Web-Stringer</Title>	
-	    					<Divider my="md" />
-	    					<Text>This application uses PeerJS and WebRTC technology to provide an easy way of sending data across clients without a backend (essentially). This application is hosted on github, and uses a freely available PeerJS and TURN server, allowing this application to provide remote connection without requiring beckend development from the developer.</Text>
-<Space h="md"/>
-	    <Text>Developed by Anthony Mesa, admesa@protonmail.com, anthonymesa@github.com</Text>
-					</Tabs.Panel>
-					
-					<Tabs.Panel value="receiver">
-						<ReceiverCard />
-					</Tabs.Panel>
+			<MantineProvider theme={theme}>
+				<div className="App">
+					<Center h="100%">
+						<Card h="95%" w="95%" shadow="sm" padding="xs" radius="md">
+							<Tabs 
+								styles={{root: {flex: 1}, 
+									panel: {height: 'calc(100% - 2.5rem)'},
+									tab: {width: '2rem'}}} 
+								value={role} 
+								onChange={handleOnChange}
+							>
+								<Tabs.List grow>
+									<Tabs.Tab value="about">About</Tabs.Tab>
+									<Tabs.Tab value="receiver">Receiver</Tabs.Tab>
+									<Tabs.Tab value="sender">Sender</Tabs.Tab>
+								</Tabs.List>
+						
+								<Tabs.Panel value="about">
+									<Space h="md" />
+									<Title order={2}>Web-Stringer</Title>	
+											<Divider my="xs" />
+											<Text size="xs">This application uses PeerJS and WebRTC technology to provide an easy way of sending data across clients without a backend (essentially). This application is hosted on github, and uses a freely available PeerJS and TURN server, allowing this application to provide remote connection without requiring beckend development from the developer.</Text>
+			<Space h="md"/>
+						<Text size="xs">Developed by <a href="https://www.github.com/anthonymesa">Anthony Mesa</a></Text>
+								</Tabs.Panel>
+								
+								<Tabs.Panel value="receiver">
+									<ReceiverCard />
+								</Tabs.Panel>
 
-					<Tabs.Panel value="sender">
-						<SenderCard />
-					</Tabs.Panel>
-				    </Tabs>
-			    </Card>
-		    </Center>
-	    </div>
-        </MantineProvider>
+								<Tabs.Panel value="sender">
+									<SenderCard />
+								</Tabs.Panel>
+							</Tabs>
+						</Card>
+					</Center>
+				</div>
+			</MantineProvider>
     );
 }
 
